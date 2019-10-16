@@ -40,16 +40,37 @@ class TetrisLogic(val randomGen: RandomGenerator,
                        var location: Array[(Int, Int)],
                        var blockType: TetrisBlock)
 
+  def clearLine(lineIndex: Int): Unit = { gameBoard.board(lineIndex) = Array.fill[TetrisBlock](nrColumns)(Empty) }
+
+  def shiftBoardDown(lineIndex: Int): Unit = {
+    for (i <- lineIndex until 0 by -1){
+      gameBoard.board(i) = gameBoard.board(i - 1)
+    }
+  }
+
+  def checkForLine(): Unit = {
+    for (i <- nrRows - 1 until 0 by -1){
+      if(!(gameBoard.board(i) contains Empty)) {
+        clearLine(i)
+        shiftBoardDown(i)
+        checkForLine()
+      }
+    }
+  }
+
+  def isEven(i: Int): Boolean = {i % 2 == 0}
+
   def spawnpoint(): (Int, Int) = {
-    val middle = (nrColumns / 2).floor.toInt
+    var middle = (nrColumns / 2)
+    if (isEven(nrColumns)) middle -= 1
     (SecondRowOnBoard, middle)
   }
 
   def spawnIBlock(): Tetromino = {
     Tetromino(
        Up,
-       Array((spawnPointY, spawnPointX - 1),     // Left
-             (spawnPointY, spawnPointX),         // Center-Left (Anchor)
+       Array((spawnPointY, spawnPointX),         // Center-Left (Anchor)
+             (spawnPointY, spawnPointX - 1),     // Left
              (spawnPointY, spawnPointX + 1),     // Center-Right
              (spawnPointY, spawnPointX + 2)),    // Right
        IBlock)
@@ -58,9 +79,9 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnJBlock(): Tetromino = {
     Tetromino(
       Up,
-      Array((spawnPointY - 1, spawnPointX - 1),  //A                                  //  +-------+
+      Array((spawnPointY, spawnPointX),          //E (Anchor)                         //  +-------+
             (spawnPointY, spawnPointX - 1),      //D                                  //  | A . . |
-            (spawnPointY, spawnPointX),          //E (Anchor)                         //  | D E F |
+            (spawnPointY - 1, spawnPointX - 1),  //A                                  //  | D E F |
             (spawnPointY, spawnPointX + 1)),     //F                                  //  | . . . |
       JBlock)                                                                         //  +-------+
   }
@@ -68,9 +89,9 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnLBlock(): Tetromino = {
     Tetromino(
       Up,
-      Array((spawnPointY - 1, spawnPointX + 1),   //C                                 //  +-------+
+      Array((spawnPointY, spawnPointX),           //E (Anchor)                        //  +-------+
             (spawnPointY, spawnPointX - 1),       //D                                 //  | . . C |
-            (spawnPointY, spawnPointX),           //E (Anchor)                        //  | D E F |
+            (spawnPointY - 1, spawnPointX + 1),   //C                                 //  | D E F |
             (spawnPointY, spawnPointX + 1)),      //F                                 //  | . . . |
       LBlock)                                                                         //  +-------+
   }
@@ -88,8 +109,9 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnSBlock(): Tetromino = {
     Tetromino(
       Up,
-      Array((spawnPointY, spawnPointX - 1),       //D                                 //  +-------+
-            (spawnPointY, spawnPointX),           //E (Anchor)                        //  | . B C |
+      Array(
+            (spawnPointY, spawnPointX),           //E (Anchor)                        //  +-------+
+            (spawnPointY, spawnPointX - 1),       //D                                 //  | . B C |
             (spawnPointY - 1, spawnPointX),       //B                                 //  | D E . |
             (spawnPointY - 1, spawnPointX + 1)),  //C                                 //  | . . . |
       SBlock)                                                                         //  +-------+
@@ -98,9 +120,9 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnTBlock(): Tetromino = {
     Tetromino(
       Up,
-      Array((spawnPointY - 1, spawnPointX),       //B                                 //  +-------+
+      Array((spawnPointY, spawnPointX),           //E (Anchor)                        //  +-------+
             (spawnPointY, spawnPointX - 1),       //D                                 //  | . B . |
-            (spawnPointY, spawnPointX),           //E (Anchor)                        //  | D E F |
+            (spawnPointY - 1, spawnPointX),       //B                                 //  | D E F |
             (spawnPointY, spawnPointX + 1)),      //F                                 //  | . . . |
       TBlock)                                                                         //  +-------+
   }
@@ -108,17 +130,15 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnZBlock(): Tetromino = {
     Tetromino(
       Up,
-      Array((spawnPointY - 1, spawnPointX - 1),   //A                                 //  +-------+
+      Array((spawnPointY , spawnPointX ),         //E (Anchor)                        //  +-------+
             (spawnPointY - 1, spawnPointX),       //B                                 //  | A B . |
-            (spawnPointY, spawnPointX),           //E (Anchor)                        //  | . E F |
+            (spawnPointY - 1, spawnPointX - 1),   //A                                 //  | . E F |
             (spawnPointY, spawnPointX + 1)),      //F                                 //  | . . . |
       ZBlock)                                                                         //  +-------+
   }
 
   def renderTetromino(tetromino: Tetromino): Unit = {
-    for (i <- 0 until NumberOfMiniblocks){
-      gameBoard.board(tetromino.location(i)._1)(tetromino.location(i)._2) = tetromino.blockType
-    }
+    for (i <- 0 until NumberOfMiniblocks){ gameBoard.board(tetromino.location(i)._1)(tetromino.location(i)._2) = tetromino.blockType }
   }
 
   def spawnTetromino(): Tetromino = {
@@ -136,72 +156,163 @@ class TetrisLogic(val randomGen: RandomGenerator,
   }
 
   def storePreviousLocation(): Array[(Int,Int)] = {
-    val tempLocationStore: Array[(Int, Int)] = Array.ofDim(4)
+    val tempLocationStore: Array[(Int, Int)] = Array.ofDim(NumberOfMiniblocks)
     for (i <- 0 until NumberOfMiniblocks) {
       tempLocationStore(i) = (currentTetromino.location(i)._1, currentTetromino.location(i)._2)
     }
     tempLocationStore
   }
 
-  def scrubPreviousLocation(array: Array[(Int,Int)]): Unit = {
+  def scrubLocation(location: Array[(Int,Int)]): Unit = {
     for (i <- 0 until NumberOfMiniblocks) {
-      gameBoard.board(array(i)._1)(array(i)._2) = Empty
+      gameBoard.board(location(i)._1)(location(i)._2) = Empty
     }
   }
 
-  def shiftLeft(): Unit = {
-    currentTetromino = currentTetromino.copy(location = Array(
-      (currentTetromino.location(0)._1, currentTetromino.location(0)._2 - 1),
-      (currentTetromino.location(1)._1, currentTetromino.location(1)._2 - 1),
-      (currentTetromino.location(2)._1, currentTetromino.location(2)._2 - 1),
-      (currentTetromino.location(3)._1, currentTetromino.location(3)._2 - 1)))
+  def restoreLocation(location: Array[(Int, Int)]): Unit = {
+    for (i <- 0 until NumberOfMiniblocks) {
+      gameBoard.board(location(i)._1)(location(i)._2) = currentTetromino.blockType
+    }
   }
 
-  def shiftRight(): Unit = {
-//    currentTetromino = currentTetromino.copy(location = Array(
-//      (currentTetromino.location(0)._1, currentTetromino.location(0)._2 + 1),
-//      (currentTetromino.location(1)._1, currentTetromino.location(1)._2 + 1),
-//      (currentTetromino.location(2)._1, currentTetromino.location(2)._2 + 1),
-//      (currentTetromino.location(3)._1, currentTetromino.location(3)._2 + 1)))
-
-    currentTetromino = currentTetromino.copy(currentTetromino = currentTetromino.location.map(_._2 + 1))
+  def rotateTetroLeft(input: (Int, Int)): (Int, Int) = {
+    var offset = (0,0)
+    val anchor = currentTetromino.location(0)
+    def rotate(input: (Int, Int)): (Int, Int) = (-input._2, input._1)
+    if(currentTetromino.blockType==IBlock){
+      offset = (currentTetromino.location(1)._1-anchor._1, currentTetromino.location(1)._2-anchor._2)
+      offset = rotate(offset)
+    }
+    val newY = -(input._2 - anchor._2) + anchor._1 + offset._1
+    val newX = (input._1 - anchor._1) + anchor._2 + offset._2
+    (newY, newX)
   }
 
-  def shiftDown(): Unit = {
-    currentTetromino = currentTetromino.copy(location = Array(
-      (currentTetromino.location(0)._1 + 1, currentTetromino.location(0)._2),
-      (currentTetromino.location(1)._1 + 1, currentTetromino.location(1)._2),
-      (currentTetromino.location(2)._1 + 1, currentTetromino.location(2)._2),
-      (currentTetromino.location(3)._1 + 1, currentTetromino.location(3)._2)))
+  def rotateTetroRight(input: (Int, Int)): (Int, Int) = {
+    var offset = (0,0)
+    val anchor = currentTetromino.location(0)
+    if(currentTetromino.blockType==IBlock){
+      offset = (currentTetromino.location(1)._1-anchor._1, currentTetromino.location(1)._2-anchor._2)
+    }
+    val newY = (input._2 - anchor._2) + anchor._1 - offset._1
+    val newX = -(input._1 - anchor._1) + anchor._2 - offset._2
+    (newY, newX)
+  }
+
+  def rotateTetromino(direction: Int): Unit = {
+    direction match {
+      case Left => currentTetromino = currentTetromino.copy(location = currentTetromino.location map(rotateTetroLeft))
+      case Right => currentTetromino = currentTetromino.copy(location = currentTetromino.location map(rotateTetroRight))
+    }
+  }
+
+  def shiftTetroRight(input: (Int, Int)): (Int, Int) = { (input._1, input._2 + 1) }
+
+  def shiftTetroLeft(input: (Int, Int)): (Int, Int) = { (input._1, input._2 - 1) }
+
+  def shiftTetroDown(input: (Int, Int)): (Int, Int) = { (input._1 + 1, input._2) }
+
+  def shiftTetromino(direction: Int): Unit = {
+    direction match {
+      case Right => currentTetromino = currentTetromino.copy(location = currentTetromino.location map(shiftTetroRight))
+      case Left => currentTetromino = currentTetromino.copy(location = currentTetromino.location map(shiftTetroLeft))
+      case Down => currentTetromino = currentTetromino.copy(location = currentTetromino.location map(shiftTetroDown))
+    }
+  }
+
+  def generateProposedLocation(prevLoc: Array[(Int, Int)], direction: Int, moveType: Int): Array[(Int, Int)] = {
+    var proposedLocation = new Array[(Int, Int)](NumberOfMiniblocks)
+
+    if(moveType == Shift)
+      direction match {
+        case Left => proposedLocation = prevLoc map (shiftTetroLeft)
+        case Right => proposedLocation = prevLoc map (shiftTetroRight)
+        case Down => proposedLocation = prevLoc map (shiftTetroDown)
+      } else {
+      direction match {
+        case Left => proposedLocation = prevLoc map (rotateTetroLeft)
+        case Right => proposedLocation = prevLoc map (rotateTetroRight)
+      }
+    }
+    proposedLocation
+  }
+
+  def moveIsValid(prevLoc: Array[(Int, Int)], direction: Int, moveType: Int): Boolean = {
+    var proposedLocation = new Array[(Int, Int)](NumberOfMiniblocks)
+
+    proposedLocation = generateProposedLocation(prevLoc, direction, moveType)
+
+    for (i <- 0 until NumberOfMiniblocks) {
+      if(proposedLocation(i)._1 >= nrRows) { return false }
+      if(proposedLocation(i)._2 >= nrColumns || proposedLocation(i)._2 < 0) { return false }
+      if(gameBoard.board(proposedLocation(i)._1)(proposedLocation(i)._2) != Empty) { return false }
+    }
+    true
   }
 
   // TODO implement me
-  def rotateLeft(): Unit = ()
+  def rotateLeft(): Unit = {
+    if (currentTetromino.blockType == OBlock) return
+    val previousLocation = storePreviousLocation()
+    scrubLocation(previousLocation)
+
+    if(moveIsValid(previousLocation, Left, Rotation)) {
+      rotateTetromino(Left)
+    } else { restoreLocation(previousLocation) }
+
+    renderTetromino(currentTetromino)
+  }
 
   // TODO implement me
-  def rotateRight(): Unit = ()
+  def rotateRight(): Unit = {
+    if (currentTetromino.blockType == OBlock) return
+    val previousLocation = storePreviousLocation()
+    scrubLocation(previousLocation)
+
+    if(moveIsValid(previousLocation, Right, Rotation)) {
+      rotateTetromino(Right)
+    } else { restoreLocation(previousLocation) }
+
+    renderTetromino(currentTetromino)
+  }
 
   // TODO implement me
   def moveLeft(): Unit = {
     val previousLocation = storePreviousLocation()
-    shiftLeft()
-    scrubPreviousLocation(previousLocation)
+    scrubLocation(previousLocation)
+
+    if(moveIsValid(previousLocation, Left, Shift)) {
+      shiftTetromino(Left)
+    } else { restoreLocation(previousLocation) }
+
     renderTetromino(currentTetromino)
   }
 
   // TODO implement me
   def moveRight(): Unit = {
     val previousLocation = storePreviousLocation()
-    shiftRight()
-    scrubPreviousLocation(previousLocation)
+    scrubLocation(previousLocation)
+
+    if(moveIsValid(previousLocation, Right, Shift)) {
+      shiftTetromino(Right)
+    } else { restoreLocation(previousLocation) }
+
     renderTetromino(currentTetromino)
   }
 
   // TODO implement me
   def moveDown(): Unit = {
     val previousLocation = storePreviousLocation()
-    shiftDown()
-    scrubPreviousLocation(previousLocation)
+    scrubLocation(previousLocation)
+
+    if(moveIsValid(previousLocation, Down, Shift)) {
+      shiftTetromino(Down)
+    } else {
+      restoreLocation(previousLocation)
+      checkForLine()
+      currentTetromino = spawnTetromino()
+    }
+
     renderTetromino(currentTetromino)
   }
 
@@ -225,7 +336,6 @@ object TetrisLogic {
   val NrTopInvisibleLines: Int = 4
   val DefaultVisibleHeight: Int = 20
   val DefaultHeight: Int = DefaultVisibleHeight + NrTopInvisibleLines
-
   val SecondRowOnBoard = 1
   val NumberOfMiniblocks = 4
 
@@ -233,6 +343,9 @@ object TetrisLogic {
   val Right: Int = 1
   val Down: Int = 2
   val Left: Int = 3
+
+  val Shift: Int = 1
+  val Rotation: Int = 2
 
   def apply() = new TetrisLogic(new ScalaRandomGen(),
     DefaultWidth,
