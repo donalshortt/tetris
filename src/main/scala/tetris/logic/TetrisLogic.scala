@@ -22,6 +22,8 @@ class TetrisLogic(val randomGen: RandomGenerator,
   val gameBoard = new GameBoard
   var currentTetromino: Tetromino = spawnTetromino()
   renderTetromino(currentTetromino)
+  var canDrop: Boolean = true
+  var gameOverFlag: Boolean = false
 
   class GameBoard() {
     def initialiseBoard(): Array[Array[TetrisBlock]] = {
@@ -36,54 +38,21 @@ class TetrisLogic(val randomGen: RandomGenerator,
     val board: Array[Array[TetrisBlock]] = initialiseBoard()
   }
 
-  //TEMP
-  def printBoard(): Unit = {
-    val output = Array.ofDim[Int](nrRows, nrColumns)
-
-    for (i <- 0 until nrRows; j <- 0 until nrColumns) {
-      gameBoard.board(i)(j) match {
-        case Empty => output(i)(j) = 0
-        case IBlock => output(i)(j) = 1
-        case JBlock => output(i)(j) = 2
-        case LBlock => output(i)(j) = 3
-        case OBlock => output(i)(j) = 4
-        case SBlock => output(i)(j) = 5
-        case TBlock => output(i)(j) = 6
-        case ZBlock => output(i)(j) = 7
-      }
-    }
-
-    for (i <- 0 until nrRows) {
-      for (j <- 0 until nrColumns) {
-        printf(output(i)(j).toString + " ")
-      }
-      printf("[" + i + "]\n")
-    }
-  }
-
-
   case class Tetromino(var rotation: Int,
                        var location: Array[(Int, Int)],
                        var blockType: TetrisBlock)
 
-  def clearLine(lineIndex: Int): Unit = { gameBoard.board(lineIndex) = Array.fill[TetrisBlock](nrColumns)(Empty) }
-
   def shiftBoardDown(lineIndex: Int): Unit = {
-    for (i <- lineIndex until 0 by -1){
-      gameBoard.board(i) = gameBoard.board(i - 1)
+    for (i <- lineIndex until 1 by -1; j <- 0 until nrColumns){
+      gameBoard.board(i)(j) = gameBoard.board(i - 1)(j)
     }
   }
 
   def checkForLine(): Unit = {
     for (i <- nrRows - 1 until 0 by -1){
       if(!(gameBoard.board(i) contains Empty)) {
-        printf("<!>PRINT BOARD<!> - Pre - CheckForLine\n")
-        printBoard()
-        clearLine(i)
         shiftBoardDown(i)
         checkForLine()
-        printf("<!>PRINT BOARD<!> - After - CheckForLine\n")
-        printBoard()
       }
     }
   }
@@ -93,8 +62,8 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def spawnpoint(): (Int, Int) = {
     var middle = (nrColumns / 2)
     if (isEven(nrColumns)) middle -= 1
-    (SecondRowOnBoard, middle)
-  }
+  (SecondRowOnBoard, middle)
+}
 
   def spawnIBlock(): Tetromino = {
     Tetromino(
@@ -167,9 +136,22 @@ class TetrisLogic(val randomGen: RandomGenerator,
       ZBlock)                                                                         //  +-------+
   }
 
+  def checkForGameOver(): Unit = {
+    for (i <- 0 until NumberOfMiniblocks) {
+      if (gameBoard.board(currentTetromino.location(i)._1)(currentTetromino.location(i)._2) != Empty){
+        gameOverFlag = true
+      }
+    }
+  }
+
+  def resetGameLoop(): Unit = {
+    currentTetromino = spawnTetromino()
+    checkForGameOver()
+    canDrop = false
+  }
+
   def renderTetromino(tetromino: Tetromino): Unit = {
     for (i <- 0 until NumberOfMiniblocks){ gameBoard.board(tetromino.location(i)._1)(tetromino.location(i)._2) = tetromino.blockType }
-    printf("Rendered tetro!!\n")
   }
 
   def spawnTetromino(): Tetromino = {
@@ -184,6 +166,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
       case 5 => spawnTBlock()
       case 6 => spawnZBlock()
     }
+
   }
 
   def storePreviousLocation(): Array[(Int,Int)] = {
@@ -336,22 +319,24 @@ class TetrisLogic(val randomGen: RandomGenerator,
     } else {
       restoreLocation(previousLocation)
       checkForLine()
-      currentTetromino = spawnTetromino()
+      resetGameLoop()
     }
 
     renderTetromino(currentTetromino)
-    printf("<!>PRINT BOARD<!> - After - Render\n")
-    printf("CurrentTetro Size: " + currentTetromino.location.size + "\n")
-    printBoard()
+  }
+
+  def doHardDrop(): Unit = {
+    canDrop = true
+    while(canDrop){moveDown()}
   }
 
   // TODO implement me
-  def doHardDrop(): Unit = ()
+  def isGameOver: Boolean = gameOverFlag
 
-  // TODO implement me
-  def isGameOver: Boolean = false
-
-  def getBlockAt(x: Int, y: Int): TetrisBlock = gameBoard.board(y)(x)
+  def getBlockAt(x: Int, y: Int): TetrisBlock = {
+    if (gameOverFlag) return Empty
+    gameBoard.board(y)(x)
+  }
 }
 
 object TetrisLogic {
