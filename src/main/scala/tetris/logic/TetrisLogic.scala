@@ -36,6 +36,32 @@ class TetrisLogic(val randomGen: RandomGenerator,
     val board: Array[Array[TetrisBlock]] = initialiseBoard()
   }
 
+  //TEMP
+  def printBoard(): Unit = {
+    val output = Array.ofDim[Int](nrRows, nrColumns)
+
+    for (i <- 0 until nrRows; j <- 0 until nrColumns) {
+      gameBoard.board(i)(j) match {
+        case Empty => output(i)(j) = 0
+        case IBlock => output(i)(j) = 1
+        case JBlock => output(i)(j) = 2
+        case LBlock => output(i)(j) = 3
+        case OBlock => output(i)(j) = 4
+        case SBlock => output(i)(j) = 5
+        case TBlock => output(i)(j) = 6
+        case ZBlock => output(i)(j) = 7
+      }
+    }
+
+    for (i <- 0 until nrRows) {
+      for (j <- 0 until nrColumns) {
+        printf(output(i)(j).toString + " ")
+      }
+      printf("[" + i + "]\n")
+    }
+  }
+
+
   case class Tetromino(var rotation: Int,
                        var location: Array[(Int, Int)],
                        var blockType: TetrisBlock)
@@ -51,9 +77,13 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def checkForLine(): Unit = {
     for (i <- nrRows - 1 until 0 by -1){
       if(!(gameBoard.board(i) contains Empty)) {
+        printf("<!>PRINT BOARD<!> - Pre - CheckForLine\n")
+        printBoard()
         clearLine(i)
         shiftBoardDown(i)
         checkForLine()
+        printf("<!>PRINT BOARD<!> - After - CheckForLine\n")
+        printBoard()
       }
     }
   }
@@ -139,6 +169,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
 
   def renderTetromino(tetromino: Tetromino): Unit = {
     for (i <- 0 until NumberOfMiniblocks){ gameBoard.board(tetromino.location(i)._1)(tetromino.location(i)._2) = tetromino.blockType }
+    printf("Rendered tetro!!\n")
   }
 
   def spawnTetromino(): Tetromino = {
@@ -179,7 +210,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
     var offset = (0,0)
     val anchor = currentTetromino.location(0)
     def rotate(input: (Int, Int)): (Int, Int) = (-input._2, input._1)
-    if(currentTetromino.blockType==IBlock){
+    if(currentTetromino.blockType == IBlock){
       offset = (currentTetromino.location(1)._1-anchor._1, currentTetromino.location(1)._2-anchor._2)
       offset = rotate(offset)
     }
@@ -191,7 +222,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def rotateTetroRight(input: (Int, Int)): (Int, Int) = {
     var offset = (0,0)
     val anchor = currentTetromino.location(0)
-    if(currentTetromino.blockType==IBlock){
+    if(currentTetromino.blockType == IBlock){
       offset = (currentTetromino.location(1)._1-anchor._1, currentTetromino.location(1)._2-anchor._2)
     }
     val newY = (input._2 - anchor._2) + anchor._1 - offset._1
@@ -250,7 +281,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
     true
   }
 
-  // TODO implement me
   def rotateLeft(): Unit = {
     if (currentTetromino.blockType == OBlock) return
     val previousLocation = storePreviousLocation()
@@ -263,7 +293,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
     renderTetromino(currentTetromino)
   }
 
-  // TODO implement me
   def rotateRight(): Unit = {
     if (currentTetromino.blockType == OBlock) return
     val previousLocation = storePreviousLocation()
@@ -276,7 +305,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
     renderTetromino(currentTetromino)
   }
 
-  // TODO implement me
   def moveLeft(): Unit = {
     val previousLocation = storePreviousLocation()
     scrubLocation(previousLocation)
@@ -288,7 +316,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
     renderTetromino(currentTetromino)
   }
 
-  // TODO implement me
   def moveRight(): Unit = {
     val previousLocation = storePreviousLocation()
     scrubLocation(previousLocation)
@@ -300,7 +327,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
     renderTetromino(currentTetromino)
   }
 
-  // TODO implement me
   def moveDown(): Unit = {
     val previousLocation = storePreviousLocation()
     scrubLocation(previousLocation)
@@ -314,6 +340,9 @@ class TetrisLogic(val randomGen: RandomGenerator,
     }
 
     renderTetromino(currentTetromino)
+    printf("<!>PRINT BOARD<!> - After - Render\n")
+    printf("CurrentTetro Size: " + currentTetromino.location.size + "\n")
+    printBoard()
   }
 
   // TODO implement me
@@ -322,7 +351,6 @@ class TetrisLogic(val randomGen: RandomGenerator,
   // TODO implement me
   def isGameOver: Boolean = false
 
-  // TODO implement me
   def getBlockAt(x: Int, y: Int): TetrisBlock = gameBoard.board(y)(x)
 }
 
